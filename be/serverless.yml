@@ -12,50 +12,46 @@ functions:
       - http:
           path: myEndpoint
           method: post
+           cors:
+            # Configure CORS options as needed
+            allowOrigin: '*'
+            allowMethods: POST
+            allowHeaders: '*'
+    environment:
+      # Use Secrets Manager or Parameter Store for sensitive data
+      MY_SECRET: !Ref MySecret
 
-  iamRoleStatements:
-    - Effect: Allow
-      Action:
-        - dynamodb:Query
-        - dynamodb:Scan
-        - dynamodb:GetItem
-        - dynamodb:PutItem
-        - dynamodb:UpdateItem
-        - dynamodb:DeleteItem
-      Resource: "arn:aws:dynamodb:us-east-1:*:*"
+# IAM Role with fine-grained permissions (replace with your specific DynamoDB table):
+iamRoleStatements:
+  - Effect: Allow
+    Action:
+      - dynamodb:GetItem
+      - dynamodb:PutItem
+    Resource: arn:aws:dynamodb:ap-southeast-2:YOUR_ACCOUNT_ID:table/my-dynamodb-table
 
+# Define your DynamoDB table resources
 resources:
   Resources:
-    myDynamoDBTable:
-      Type: AWS::CloudFormation::Stack
-      Properties:
-        TemplateFile: resources/dynamodb-table.yml
+    # ... (define your DynamoDB table configuration here)
 
-    ApiGatewayToLambdaPermission:
-      Type: AWS::Lambda::Permission
-      Properties:
-        FunctionName: 
-          Fn::GetAtt:
-            - myLambdaFunction
-            - Arn
-        Action: lambda:InvokeFunction
-        Principal: apigateway.amazonaws.com
+# Event source mapping (replace with your actual API Gateway resource ARN)
+EventSourceMapping:
+  Type: AWS::Serverless::ApiGateway::EventSourceMapping
+  Properties:
+    RestApiId: !Ref ApiGateway
+    ResourceId: !GetAtt MyApiGatewayResource.Id
+    ResourcePath: /myEndpoint
+    HttpMethod: POST
+    FunctionName: !GetAtt myLambdaFunction.Arn
 
-    ApiGatewayInvokePolicy:
-      Type: AWS::IAM::Policy
-      Properties:
-        PolicyName: ApiGatewayInvokePolicy
-        PolicyDocument:
-          Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Action:
-                - lambda:InvokeFunction
-              Resource:
-                - 
-                  Fn::GetAtt:
-                    - myLambdaFunction
-                    - Arn
-        Roles:
-          - 
-            Ref: ApiGatewayToLambdaRole
+# API Gateway resource (example)
+# Replace with your actual configuration and CORS options
+MyApiGatewayResource:
+  Type: AWS::Serverless::ApiGateway::Resource
+  Properties:
+    RestApiId: !Ref ApiGateway
+    PathPart: /myEndpoint
+    Cors: # Example CORS configuration
+      AllowHeaders: "'*'"
+      AllowMethods: "'POST'"
+      AllowOrigin: "'*'"
